@@ -1,143 +1,374 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ring Tap — Telegram Mini‑Game</title>
+  <title>Word Rush • 15s Survival</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --bg:#0f1220; --card:#181b2e; --accent:#7c5cff; --text:#e9ecff; --muted:#9aa0c3; --ok:#3ad29f;
+      --bg: #0f1227;
+      --panel: #171a33;
+      --accent: #7c5cff;
+      --accent-2: #1ec2cf;
+      --good: #2ecc71;
+      --bad: #ff5c5c;
+      --text: #e9ecff;
+      --muted: #b6b9d6;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
     }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
-    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; background: radial-gradient(1200px 600px at 50% -10%, #1a1e35, #0f1220); color: var(--text); display: grid; place-items: center; }
-    .app { width: 100%; max-width: 480px; padding: 18px; }
-    .card { background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
-    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .title { font-weight: 800; font-size: 20px; letter-spacing: 0.2px; }
-    .muted { color: var(--muted); font-size: 14px; }
-    .hud { margin: 14px 0 10px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-    .pill { background: #0f1220; border: 1px solid rgba(255,255,255,0.06); border-radius: 999px; padding: 8px 12px; text-align: center; }
-    .arena { display: grid; place-items: center; height: 360px; position: relative; margin: 6px 0 10px; }
-    .target { width: 96px; height: 96px; border-radius: 999px; background: radial-gradient(60px 60px at 35% 35%, #a999ff, #7c5cff 60%, #5c3fff); box-shadow: 0 10px 30px rgba(124,92,255,0.45); display: grid; place-items: center; cursor: pointer; user-select: none; }
-    .target:active { transform: scale(0.98); }
-    .score { font-weight: 700; font-size: 14px; opacity: 0.92; }
-    .btn { width: 100%; appearance: none; border: 0; background: var(--accent); color: white; border-radius: 12px; padding: 14px 16px; font-weight: 700; font-size: 16px; cursor: pointer; box-shadow: 0 12px 22px rgba(124,92,255,0.35); }
-    .btn:disabled { opacity: 0.5; }
-    .ok { background: var(--ok); box-shadow: 0 12px 22px rgba(58,210,159,0.35); }
-    .footer { text-align:center; margin-top: 10px; font-size: 12px; color: var(--muted); }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      background: radial-gradient(1200px 800px at 80% -10%, #1a1f47 0%, #0f1227 45%, #0b0d1d 100%);
+      color: var(--text);
+      display: grid; place-items: center;
+    }
+    .app { width: min(920px, 96vw); padding: 18px; }
+    header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 14px; gap: 12px; }
+    .brand { display:flex; align-items:center; gap:12px; font-weight: 800; letter-spacing:.4px; }
+    .chip { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color:white; padding:6px 10px; border-radius: 999px; font-size:12px; box-shadow: var(--shadow); }
+
+    .hud { display:grid; grid-template-columns: 1fr auto auto; gap: 12px; }
+    .timer { grid-column: 1 / -1; background: var(--panel); border-radius: var(--radius); padding: 10px 12px; position: relative; overflow: hidden; box-shadow: var(--shadow); }
+    .bar { position:absolute; inset:0 0 0 auto; width: 100%; background: linear-gradient(90deg, rgba(124,92,255,.18), rgba(30,194,207,.18)); transform-origin:left; }
+    .time-readout { position: relative; z-index: 2; display:flex; align-items:center; justify-content:space-between; font-weight:700; }
+    .pill { background: #0d1026; border: 1px solid rgba(255,255,255,.07); padding:6px 10px; border-radius: 12px; color: var(--muted); font-weight: 700; }
+
+    .card { background: var(--panel); border: 1px solid rgba(255,255,255,.06); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+    .question { margin: 16px 0 4px; font-size: clamp(24px, 4.2vw, 40px); font-weight: 800; text-align:center; letter-spacing: .3px; }
+    .subtitle { text-align:center; margin:0 0 10px; color: var(--muted); }
+
+    .grid { display:grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 740px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+    button.choice { appearance: none; border:1px solid rgba(255,255,255,.1); background: #121532; color: var(--text);
+      padding: 14px 14px; border-radius: 14px; font-size: 16px; text-align:left; cursor:pointer; transition: transform .05s ease, border-color .2s, background .2s; }
+    button.choice:hover { transform: translateY(-1px); }
+    button.choice.correct { border-color: rgba(46,204,113,.8); background: rgba(46,204,113,.1); }
+    button.choice.wrong { border-color: rgba(255,92,92,.9); background: rgba(255,92,92,.08); }
+    button.choice:disabled { opacity:.8; cursor:not-allowed; }
+
+    .controls { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:14px; flex-wrap:wrap; }
+    .btn { appearance:none; border:0; padding:12px 16px; border-radius:12px; font-weight:800; letter-spacing:.3px; cursor:pointer; box-shadow: var(--shadow); }
+    .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color:white; }
+    .btn.ghost { background: transparent; border:1px solid rgba(255,255,255,.12); color: var(--text); }
+
+    .status-row { display:flex; gap:10px; justify-content:space-between; margin: 10px 0 0; }
+    .status-row .box { background:#0d1026; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.06); flex:1; text-align:center; }
+    .big { font-size: 22px; font-weight: 800; }
+
+    .footer { text-align:center; color: var(--muted); font-size:13px; margin-top: 12px; }
+    .footer a { color: var(--muted); }
+
+    .flash { animation: flash .22s linear; }
+    @keyframes flash { 0%{ transform: scale(1);} 50%{ transform: scale(1.02);} 100%{ transform: scale(1);} }
+    .shake { animation: shake .28s ease; }
+    @keyframes shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px);} 30%, 50%, 70% { transform: translateX(-4px);} 40%, 60% { transform: translateX(4px);} }
+
+    .hidden { display:none !important; }
   </style>
 </head>
 <body>
   <div class="app">
-    <div class="card">
-      <div class="row">
-        <div class="title">Ring Tap</div>
-        <div class="muted" id="hello"></div>
+    <header>
+      <div class="brand">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2l2.39 4.84L20 8.27l-4 3.89L17.18 18 12 15.77 6.82 18 8 12.16l-4-3.89 5.61-1.43L12 2z" fill="url(#g)"/>
+          <defs><linearGradient id="g" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop stop-color="#7c5cff"/><stop offset="1" stop-color="#1ec2cf"/></linearGradient></defs>
+        </svg>
+        <div>
+          <div style="font-size:18px; line-height:1;">Word Rush</div>
+          <div style="font-size:12px; color:var(--muted); line-height:1;">15s survival • +2s correct • −3s wrong</div>
+        </div>
       </div>
-      <div class="hud">
-        <div class="pill">⏱ <span id="time">20</span>s</div>
-        <div class="pill">🎯 <span id="hits">0</span></div>
-        <div class="pill">⭐️ Best: <span id="best">0</span></div>
+      <div class="chip" id="modeChip">Browser Mode</div>
+    </header>
+
+    <div class="timer">
+      <div class="bar" id="bar"></div>
+      <div class="time-readout">
+        <div>⏱ Time: <span id="time">15.0</span>s</div>
+        <div class="pill">Score: <span id="score">0</span></div>
       </div>
-      <div class="arena">
-        <div id="target" class="target"><div class="score" id="tap">TAP</div></div>
+    </div>
+
+    <div class="card" id="gameCard">
+      <p class="subtitle">Find the correct meaning</p>
+      <div class="question" id="question">Press Start</div>
+      <div class="grid" id="choices">
+        <button class="choice" disabled>—</button>
+        <button class="choice" disabled>—</button>
+        <button class="choice" disabled>—</button>
+        <button class="choice" disabled>—</button>
       </div>
-      <button id="start" class="btn">Start</button>
-      <button id="submit" class="btn ok" disabled>Submit score</button>
-      <div class="footer">Made for Telegram Web App • closes automatically after submit</div>
+
+      <div class="status-row">
+        <div class="box">Streak 🔥 <span class="big" id="streak">0</span></div>
+        <div class="box">Best ⭐ <span class="big" id="best">0</span></div>
+        <div class="box">Questions ✅ <span class="big" id="qcount">0</span></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="startBtn">Start</button>
+        <button class="btn ghost hidden" id="againBtn">Play Again</button>
+        <button class="btn ghost hidden" id="submitBtn">Submit to Telegram</button>
+        <label class="btn ghost" for="fileInput">📥 Load words (.json)</label>
+        <input id="fileInput" type="file" accept="application/json" class="hidden" />
+      </div>
+
+      <div class="footer">Tip: You can host this page on GitHub Pages. Optional: load a custom word list JSON of objects like <code>{"word":"candid","meaning":"honest and direct"}</code>.</div>
     </div>
   </div>
 
   <script>
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.expand();
-      tg.setHeaderColor('#0f1220');
-      tg.setBackgroundColor('#0f1220');
-    }
+  // --- Telegram WebApp integration ---
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    document.getElementById('modeChip').textContent = 'Telegram Mode';
+  }
 
-    const hello = document.getElementById('hello');
-    const name = tg?.initDataUnsafe?.user?.first_name || 'friend';
-    hello.textContent = `Hi, ${name}`;
+  // --- Game data (default word list) ---
+  /** You can replace/extend this list or load a JSON file at runtime. */
+  let WORDS = [
+    { word: 'abandon', meaning: 'to give up completely' },
+    { word: 'abrupt', meaning: 'sudden and unexpected' },
+    { word: 'adept', meaning: 'very skilled' },
+    { word: 'adverse', meaning: 'harmful; unfavorable' },
+    { word: 'advocate', meaning: 'to support or argue for' },
+    { word: 'agile', meaning: 'able to move quickly and easily' },
+    { word: 'alleviate', meaning: 'to make less severe' },
+    { word: 'ambiguous', meaning: 'having more than one meaning' },
+    { word: 'amicable', meaning: 'friendly and peaceful' },
+    { word: 'antithesis', meaning: 'the direct opposite' },
+    { word: 'apparent', meaning: 'clearly visible or understood' },
+    { word: 'arduous', meaning: 'difficult and tiring' },
+    { word: 'articulate', meaning: 'able to express clearly' },
+    { word: 'assert', meaning: 'to state firmly' },
+    { word: 'austere', meaning: 'plain; strictly simple' },
+    { word: 'ban', meaning: 'to officially forbid' },
+    { word: 'benevolent', meaning: 'kind and generous' },
+    { word: 'boast', meaning: 'to speak with excessive pride' },
+    { word: 'brevity', meaning: 'shortness (of time or words)' },
+    { word: 'candid', meaning: 'honest and direct' },
+    { word: 'capricious', meaning: 'impulsive; unpredictable' },
+    { word: 'catalyst', meaning: 'something that speeds change' },
+    { word: 'coerce', meaning: 'to force someone by pressure' },
+    { word: 'coherent', meaning: 'logical and consistent' },
+    { word: 'concise', meaning: 'brief but comprehensive' },
+    { word: 'concur', meaning: 'to agree' },
+    { word: 'condone', meaning: 'to accept or allow' },
+    { word: 'conspicuous', meaning: 'easily seen or noticed' },
+    { word: 'credible', meaning: 'believable' },
+    { word: 'culminate', meaning: 'to reach a climax or point' },
+    { word: 'cursory', meaning: 'quick and without attention to detail' },
+    { word: 'daunt', meaning: 'to make someone feel intimidated' },
+    { word: 'diligent', meaning: 'hard-working and careful' },
+    { word: 'dwindle', meaning: 'to diminish gradually' },
+    { word: 'eloquent', meaning: 'fluent or persuasive in speaking' },
+    { word: 'empirical', meaning: 'based on observation or experience' },
+    { word: 'entice', meaning: 'to attract by offering pleasure' },
+    { word: 'eradicate', meaning: 'to destroy completely' },
+    { word: 'feasible', meaning: 'possible to do easily' },
+    { word: 'frugal', meaning: 'economical; avoiding waste' },
+    { word: 'gregarious', meaning: 'sociable; enjoying company' },
+    { word: 'hindrance', meaning: 'a thing that provides resistance' },
+    { word: 'impartial', meaning: 'treating all equally; fair' },
+    { word: 'innate', meaning: 'inborn; natural' },
+    { word: 'lucid', meaning: 'expressed clearly; easy to understand' },
+    { word: 'novice', meaning: 'a beginner' },
+    { word: 'obsolete', meaning: 'out of date; no longer used' },
+    { word: 'precise', meaning: 'exact and accurate' },
+    { word: 'succinct', meaning: 'briefly and clearly expressed' }
+  ];
 
-    const target = document.getElementById('target');
-    const startBtn = document.getElementById('start');
-    const submitBtn = document.getElementById('submit');
-    const timeEl = document.getElementById('time');
-    const hitsEl = document.getElementById('hits');
-    const bestEl = document.getElementById('best');
+  // --- Elements ---
+  const timeEl = document.getElementById('time');
+  const scoreEl = document.getElementById('score');
+  const barEl = document.getElementById('bar');
+  const qEl = document.getElementById('question');
+  const gridEl = document.getElementById('choices');
+  const startBtn = document.getElementById('startBtn');
+  const againBtn = document.getElementById('againBtn');
+  const submitBtn = document.getElementById('submitBtn');
+  const streakEl = document.getElementById('streak');
+  const bestEl = document.getElementById('best');
+  const qcountEl = document.getElementById('qcount');
+  const gameCard = document.getElementById('gameCard');
+  const fileInput = document.getElementById('fileInput');
 
-    let timeLeft = 20;
-    let hits = 0;
-    let timer = null;
+  // --- State ---
+  const START_TIME = 15.0; // seconds total for the whole run
+  const BONUS = 2.0;       // +2s on correct
+  const PENALTY = 3.0;     // -3s on wrong
 
-    bestEl.textContent = localStorage.getItem('ringtap_best') || '0';
+  let timeLeft = START_TIME;
+  let score = 0, streak = 0, best = Number(localStorage.getItem('wordrush_best')||0), qcount = 0;
+  let running = false, timerId = null, current = null, deck = [];
 
-    function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  bestEl.textContent = String(best);
 
-    function moveTarget() {
-      const arena = document.querySelector('.arena');
-      const rect = arena.getBoundingClientRect();
-      const size = 96;
-      const x = rand(0, rect.width - size);
-      const y = rand(0, rect.height - size);
-      target.style.position = 'absolute';
-      target.style.left = x + 'px';
-      target.style.top = y + 'px';
-    }
+  function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+  function drawDeck(){ deck = shuffle([...Array(WORDS.length).keys()]); }
 
-    function reset() {
-      timeLeft = 20; hits = 0;
-      timeEl.textContent = timeLeft;
-      hitsEl.textContent = hits;
-      submitBtn.disabled = true;
-      startBtn.disabled = false;
-      moveTarget();
-    }
+  function nextQuestion(){
+    if (deck.length === 0) drawDeck();
+    const idx = deck.pop();
+    current = WORDS[idx];
+    qEl.textContent = current.word;
 
-    function tick() {
-      timeLeft -= 1;
-      timeEl.textContent = timeLeft;
-      if (timeLeft <= 0) {
-        clearInterval(timer); timer = null;
-        const best = Math.max(parseInt(bestEl.textContent||'0'), hits);
-        bestEl.textContent = best.toString();
-        localStorage.setItem('ringtap_best', best.toString());
-        submitBtn.disabled = false;
-        startBtn.disabled = false;
-      }
-    }
+    const wrongs = shuffle(WORDS.filter((_,i)=>i!==idx)).slice(0,3).map(w=>w.meaning);
+    const options = shuffle([current.meaning, ...wrongs]);
 
-    startBtn.addEventListener('click', () => {
-      reset();
-      startBtn.disabled = true;
-      submitBtn.disabled = true;
-      moveTarget();
-      timer = setInterval(tick, 1000);
+    // build buttons
+    gridEl.innerHTML = '';
+    options.forEach(text => {
+      const btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.textContent = text;
+      btn.onclick = () => choose(text);
+      gridEl.appendChild(btn);
     });
+  }
 
-    target.addEventListener('click', () => {
-      if (!timer) return; // game not running
-      hits += 1;
-      hitsEl.textContent = hits;
-      moveTarget();
+  function choose(value){
+    if (!running) return;
+    const correct = value === current.meaning;
+    const buttons = [...gridEl.querySelectorAll('button.choice')];
+    buttons.forEach(b => b.disabled = true);
+
+    if (correct){
+      score++; streak++; qcount++;
+      timeLeft += BONUS; // +2s
+      flashGood(buttons);
+    } else {
+      streak = 0; qcount++;
+      timeLeft -= PENALTY; // -3s
+      flashBad(buttons, value);
+    }
+
+    updateHUD();
+    if (timeLeft <= 0){
+      endGame();
+    } else {
+      setTimeout(()=>{ buttons.forEach(b => b.disabled = false); nextQuestion(); }, 180);
+    }
+  }
+
+  function flashGood(buttons){
+    buttons.forEach(b=>{ if(b.textContent===current.meaning){ b.classList.add('correct'); setTimeout(()=>b.classList.remove('correct'), 350);} });
+    gameCard.classList.add('flash'); setTimeout(()=>gameCard.classList.remove('flash'), 240);
+  }
+  function flashBad(buttons, chosen){
+    buttons.forEach(b=>{
+      if (b.textContent===chosen) b.classList.add('wrong');
+      if (b.textContent===current.meaning) b.classList.add('correct');
+      setTimeout(()=>{ b.classList.remove('wrong'); b.classList.remove('correct'); }, 400);
     });
+    gameCard.classList.add('shake'); setTimeout(()=>gameCard.classList.remove('shake'), 280);
+  }
 
-    submitBtn.addEventListener('click', () => {
-      const payload = { game: 'ringtap', score: hits };
-      if (tg && tg.sendData) {
-        tg.sendData(JSON.stringify(payload));
-        tg.close();
-      } else {
-        alert('Telegram WebApp context not found. Open from the bot.');
-      }
-    });
+  function updateHUD(){
+    scoreEl.textContent = String(score);
+    streakEl.textContent = String(streak);
+    qcountEl.textContent = String(qcount);
+    const t = clamp(timeLeft, 0, 99);
+    timeEl.textContent = t.toFixed(1);
 
-    // Initial position
-    moveTarget();
+    // bar width reflects time remaining out of a soft cap window (0..20s)
+    const windowMax = 20; // visual scale only
+    const pct = clamp(t / windowMax, 0, 1);
+    barEl.style.transform = `scaleX(${pct})`;
+  }
+
+  function startTimer(){
+    timerId = setInterval(()=>{
+      if (!running) return;
+      timeLeft = Math.max(0, timeLeft - 0.1);
+      updateHUD();
+      if (timeLeft <= 0){ endGame(); }
+    }, 100);
+  }
+
+  function startGame(){
+    running = true; score = 0; streak = 0; qcount = 0; timeLeft = START_TIME;
+    startBtn.classList.add('hidden');
+    againBtn.classList.add('hidden');
+    submitBtn.classList.add('hidden');
+    updateHUD();
+    drawDeck(); nextQuestion();
+    if (!timerId) startTimer();
+  }
+
+  function endGame(){
+    running = false;
+    if (timerId){ clearInterval(timerId); timerId = null; }
+    timeLeft = 0; updateHUD();
+
+    if (score > best){ best = score; localStorage.setItem('wordrush_best', String(best)); bestEl.textContent = String(best); }
+
+    qEl.textContent = `Game Over — Score: ${score}`;
+    againBtn.classList.remove('hidden');
+
+    // Auto-send to Telegram bot if available
+    if (tg){
+      const payload = { game: 'word-meaning', score };
+      try { tg.sendData(JSON.stringify(payload)); } catch(e) { /* ignore */ }
+      submitBtn.classList.add('hidden');
+    } else {
+      submitBtn.classList.remove('hidden');
+    }
+  }
+
+  // Manual submit for browser mode (copies JSON for convenience)
+  submitBtn.addEventListener('click', () => {
+    const payload = JSON.stringify({ game: 'word-meaning', score });
+    navigator.clipboard?.writeText(payload);
+    submitBtn.textContent = 'Copied JSON ✔';
+    setTimeout(()=> submitBtn.textContent = 'Submit to Telegram', 1200);
+  });
+
+  startBtn.addEventListener('click', startGame);
+  againBtn.addEventListener('click', startGame);
+
+  // Load custom JSON word list
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!Array.isArray(data)) throw new Error('JSON must be an array');
+      const normalized = data.map(x=>({ word: String(x.word||x.term||x[0]).trim(), meaning: String(x.meaning||x.def||x[1]).trim() }))
+                              .filter(x=>x.word && x.meaning);
+      if (normalized.length < 4) throw new Error('Need at least 4 valid word/meaning pairs');
+      WORDS = normalized; drawDeck();
+      qEl.textContent = `Loaded ${WORDS.length} items. Press Start.`;
+    } catch(err){
+      alert('Could not load JSON: ' + err.message);
+    } finally { e.target.value=''; }
+  });
+
+  // Optional: load from URL ?list=... pointing to a JSON file
+  (async function(){
+    const u = new URL(location.href);
+    const list = u.searchParams.get('list');
+    if (list){
+      try {
+        const res = await fetch(list, { cache:'no-store' });
+        const data = await res.json();
+        const normalized = data.map(x=>({ word: String(x.word||x.term||x[0]).trim(), meaning: String(x.meaning||x.def||x[1]).trim() }))
+                              .filter(x=>x.word && x.meaning);
+        if (normalized.length >= 4) { WORDS = normalized; qEl.textContent = `Loaded ${WORDS.length} items. Press Start.`; }
+      } catch(e){ /* ignore */ }
+    }
+  })();
+
   </script>
 </body>
 </html>
-
